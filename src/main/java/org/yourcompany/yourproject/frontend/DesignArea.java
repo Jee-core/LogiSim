@@ -1,19 +1,34 @@
-package org.yourcompany.yourproject.GUI.ui;
+package org.yourcompany.yourproject.Frontend;
 
-import org.yourcompany.yourproject.GUI.ui.Board;
-import org.yourcompany.yourproject.GUI.ui.BoardHelper;
-import org.yourcompany.yourproject.businessLayer.components.Circuit;
-import org.yourcompany.yourproject.businessLayer.components.CircuitComponent;
-import org.yourcompany.yourproject.businessLayer.components.ComponentBase;
-import org.yourcompany.yourproject.businessLayer.components.Connector;
-import javax.swing.*;
-import java.awt.*;
+import java.awt.BasicStroke;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Font;
+import java.awt.GradientPaint;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Point;
+import java.awt.Rectangle;
+import java.awt.RenderingHints;
+import java.awt.Stroke;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+
+import javax.swing.BorderFactory;
+import javax.swing.JComponent;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
+
+import org.yourcompany.yourproject.Backend.businessLayer.components.Circuit;
+import org.yourcompany.yourproject.Backend.businessLayer.components.SubcircuitComponent;
+import org.yourcompany.yourproject.Backend.businessLayer.components.gates.LED;
+import org.yourcompany.yourproject.Backend.businessLayer.components.Connector;
+import org.yourcompany.yourproject.Backend.businessLayer.components.GateComponent;
 
 public class DesignArea extends JPanel {
 
@@ -66,6 +81,29 @@ public class DesignArea extends JPanel {
             )
         ));
 
+        // Wire selection functionality
+        addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                // Deselect all wires first
+                for (Component comp : getComponents()) {
+                    if (comp instanceof DrawWire) {
+                        ((DrawWire) comp).setSelected(false);
+                    }
+                }
+                
+                // Check if clicked on a wire
+                for (Component comp : getComponents()) {
+                    if (comp instanceof DrawWire && comp.contains(e.getPoint())) {
+                        ((DrawWire) comp).setSelected(true);
+                        break;
+                    }
+                }
+                
+                repaint();
+            }
+        });
+
         // Modern label with gradient effect simulation
         label = new JLabel("CIRCUIT") {
             @Override
@@ -93,6 +131,7 @@ public class DesignArea extends JPanel {
         label.setOpaque(false);
         add(label);
         instance = this;
+        
         
         // Initialize controller and view service
         viewService = new BoardHelper(this);
@@ -176,7 +215,7 @@ public class DesignArea extends JPanel {
         }
 
         // Add gates
-        for (ComponentBase gate : circuit.getGates()) {
+        for (GateComponent gate : circuit.getGates()) {
             // Check if gate already exists in UI to avoid duplicates
             boolean gateExists = false;
             for (DrawGates existingGate : gateUIs) {
@@ -240,18 +279,100 @@ public class DesignArea extends JPanel {
         );
         
         // Add to circuit and design area
-        currentCircuit.addWire(connector);
+        currentCircuit.addConnectionWire(connector);
         add(connectorUI);
         setComponentZOrder(connectorUI, 0); // Send to back
         wireUIs.add(connectorUI);
         
         // Update connector with UI references
-        connector.setFromGateUI(sourceGate);
-        connector.setToGateUI(targetGate);
+        connector.setFromUI(sourceGate);
+        connector.setToUI(targetGate);
+        
+        // Special handling for LED connections
+        if (targetGate.getGate() instanceof LED) {
+            // Force LED to update its state immediately
+            LED led = (LED) targetGate.getGate();
+            led.computeOutput();
+            targetGate.repaint(); // Force visual update
+            
+            // Also update the LED status panel
+            repaint();
+        }
         
         // Repaint
         repaint();
     }
+    /**
+ * Enhanced refresh method that updates entire circuit visually
+ */
+public void refreshEntireCircuit() {
+    System.out.println("DEBUG: DesignArea - Refreshing entire circuit...");
+    
+    if (controller != null && currentCircuit != null) {
+        // Use controller to propagate signals and update visuals
+        controller.propagateSignals();
+        
+        // Force update of all gate visuals
+        updateAllGateVisuals();
+        
+        // Update LED states specifically
+        updateLEDStates();
+        
+        // Update wire connections
+        updateWireConnections();
+        
+        // Force repaint
+        repaint();
+        
+        System.out.println("DEBUG: DesignArea - Refresh completed");
+    } else {
+        System.out.println("DEBUG: Cannot refresh - controller: " + controller + ", circuit: " + currentCircuit);
+    }
+}
+
+/**
+ * Force update of all gate visuals
+ */
+public void updateAllGateVisuals() {
+    for (DrawGates gateUI : gateUIs) {
+        gateUI.repaint();
+    }
+    
+    // Also use viewService if available
+    if (viewService != null) {
+        viewService.updateAllGateVisuals();
+    }
+}
+
+/**
+ * Get the BoardHelper instance for external access
+ */
+public BoardHelper getViewService() {
+    return viewService;
+}
+
+/**
+ * Get the Board controller for external access
+ */
+public Board getBoardController() {
+    return controller;
+}
+
+/**
+ * Enhanced LED state update that forces circuit recomputation
+ */
+public void updateLEDStatesWithPropagation() {
+    if (currentCircuit != null) {
+        // First propagate signals through the circuit
+        currentCircuit.sigPropogation();
+        
+        // Then update LED states
+        updateLEDStates();
+        
+        // Force visual update
+        repaint();
+    }
+}
 
     /**
      * Update wire connections in the UI
@@ -264,7 +385,7 @@ public class DesignArea extends JPanel {
         wireUIs.clear();
 
         if (currentCircuit != null) {
-            currentCircuit.updateWirePositions();
+            currentCircuit.updateConnectorPos();
             
             // Recreate all wires with proper gate references
             for (Connector wire : currentCircuit.getWires()) {
@@ -284,8 +405,8 @@ public class DesignArea extends JPanel {
                 if (sourceGateUI != null && targetGateUI != null) {
                     DrawWire wireUI = new DrawWire(
                         wire, 
-                        sourceGateUI, wire.getFromPort(),
-                        targetGateUI, wire.getToPort()
+                        sourceGateUI, wire.getSourcePortIndex(),
+                        targetGateUI, wire.getDestinationPortIndex()
                     );
                     wireUI.setBounds(0, 0, getWidth(), getHeight());
                     add(wireUI);
@@ -293,8 +414,8 @@ public class DesignArea extends JPanel {
                     setComponentZOrder(wireUI, 0);
                     
                     // Update the connector with UI references
-                    wire.setFromGateUI(sourceGateUI);
-                    wire.setToGateUI(targetGateUI);
+                    wire.setFromUI(sourceGateUI);
+                    wire.setToUI(targetGateUI);
                 }
             }
         }
@@ -345,7 +466,7 @@ public class DesignArea extends JPanel {
     /**
      * Add a new gate component to the current circuit at the specified position
      */
-    public boolean addGateToCircuit(ComponentBase gate, int x, int y) {
+    public boolean addGateToCircuit(GateComponent gate, int x, int y) {
         // Use controller to add gate
         if (controller != null) {
             boolean result = controller.addGate(gate, x, y);
@@ -354,6 +475,14 @@ public class DesignArea extends JPanel {
                 gateUIs = viewService.getGateViews();
                 // Ensure wires are updated for the new gate
                 updateWireConnections();
+                
+                // Special handling for LED - ensure it gets proper updates
+                if (gate instanceof LED) {
+                    // Force initial state update
+                    ((LED) gate).computeOutput();
+                    // Force visual update
+                    viewService.updateLEDStates();
+                }
             }
             return result;
         }
@@ -379,7 +508,7 @@ public class DesignArea extends JPanel {
         gate.setPosition(x, y);
 
         // Add to circuit
-        currentCircuit.addGate(gate);
+        currentCircuit.addGateFunc(gate);
 
         // Create UI component
         DrawGates gateUI = new DrawGates(gate);
@@ -393,12 +522,81 @@ public class DesignArea extends JPanel {
         }
         gateUIs.add(gateUI);
 
+        // Special handling for LED
+        if (gate instanceof LED) {
+            // Force initial state computation
+            ((LED) gate).computeOutput();
+            gateUI.repaint(); // Force visual update
+            
+            // Update LED status panel
+            repaint();
+        }
+
         // Update wire connections to reflect new gate
         updateWireConnections();
 
         revalidate();
         repaint();
         return true;
+    }
+
+    /**
+     * Update LED states when circuit simulation runs
+     */
+    public void updateLEDStates() {
+        for (DrawGates gateUI : gateUIs) {
+            if (gateUI.getGate() instanceof LED) {
+                LED led = (LED) gateUI.getGate();
+                led.computeOutput(); // Recompute LED state
+                gateUI.repaint(); // Force visual update
+            }
+        }
+        repaint();
+    }
+
+    /**
+     * Get all LED components in the circuit
+     */
+    public List<LED> getLEDs() {
+        List<LED> leds = new ArrayList<>();
+        for (DrawGates gateUI : gateUIs) {
+            if (gateUI.getGate() instanceof LED) {
+                leds.add((LED) gateUI.getGate());
+            }
+        }
+        return leds;
+    }
+
+    /**
+     * Check if any LED is currently lit (useful for testing)
+     */
+    public boolean hasLitLEDs() {
+        for (LED led : getLEDs()) {
+            if (led.isLit()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Run circuit simulation and update all LED states
+     */
+    public void simulateCircuit() {
+        if (currentCircuit != null) {
+            // Evaluate the circuit
+            currentCircuit.evaluate();
+            
+            // Force LED state updates
+            updateLEDStates();
+            
+            // Update all gate visuals
+            for (DrawGates gateUI : gateUIs) {
+                gateUI.repaint();
+            }
+            
+            repaint();
+        }
     }
 
     /**
@@ -541,21 +739,62 @@ public class DesignArea extends JPanel {
             g2d.drawLine(sourcePoint.x, sourcePoint.y, tempWireEnd.x, tempWireEnd.y);
         }
         
-        // ========== CRITICAL: Draw circuit components ==========
-    /*    if (currentCircuit != null) {
-            for (ComponentBase gate : currentCircuit.getGates()) {
-                if (gate instanceof CircuitComponent) {
-                    drawCircuitComponent(g2d, (CircuitComponent) gate);
-                }
+        // Draw LED status indicators in corner for quick overview
+        drawLEDStatusPanel(g2d);
+    }
+
+    /**
+     * Draw LED status panel in corner for quick overview
+     */
+    private void drawLEDStatusPanel(Graphics2D g2d) {
+        List<LED> leds = getLEDs();
+        if (leds.isEmpty()) return;
+        
+        int panelX = getWidth() - 150;
+        int panelY = 10;
+        int panelWidth = 140;
+        int panelHeight = 30 + leds.size() * 20;
+        
+        // Draw background
+        g2d.setColor(new Color(36, 41, 54, 200));
+        g2d.fillRoundRect(panelX, panelY, panelWidth, panelHeight, 10, 10);
+        g2d.setColor(BORDER_COLOR);
+        g2d.setStroke(new BasicStroke(1));
+        g2d.drawRoundRect(panelX, panelY, panelWidth, panelHeight, 10, 10);
+        
+        // Draw title
+        g2d.setColor(TEXT_COLOR);
+        g2d.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        g2d.drawString("LED Status", panelX + 10, panelY + 15);
+        
+        // Draw LED states
+        g2d.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        for (int i = 0; i < leds.size(); i++) {
+            LED led = leds.get(i);
+            int ledY = panelY + 30 + i * 20;
+            
+            // Draw LED indicator
+            Color ledColor = led.isLit() ? Color.GREEN : Color.RED;
+            g2d.setColor(ledColor);
+            g2d.fillOval(panelX + 10, ledY - 5, 8, 8);
+            
+            // Draw glow effect for lit LEDs
+            if (led.isLit()) {
+                g2d.setColor(new Color(50, 255, 50, 80));
+                g2d.fillOval(panelX + 8, ledY - 7, 12, 12);
             }
-        }*/ 
+            
+            // Draw LED label
+            g2d.setColor(TEXT_COLOR);
+            g2d.drawString("LED " + (i + 1) + ": " + (led.isLit() ? "ON" : "OFF"), panelX + 25, ledY + 2);
+        }
     }
 
     /**
      * Draw circuit component as a rectangle with input/output pins
      * This is the EXACT SAME METHOD that makes CircuitPanel work
      */
-    private void drawCircuitComponent(Graphics graphics, CircuitComponent circuitComp) {
+    private void drawCircuitComponent(Graphics graphics, SubcircuitComponent circuitComp) {
         Point pos = circuitComp.getPosition();
         
         // Draw as a rectangle representing the circuit
@@ -567,7 +806,7 @@ public class DesignArea extends JPanel {
         // Draw circuit name
         graphics.setColor(Color.BLACK);
         graphics.setFont(new Font("Arial", Font.BOLD, 12));
-        String displayName = circuitComp.getCircuitDisplayName();
+        String displayName = circuitComp.getCircuitName();
         if (displayName.length() > 10) {
             displayName = displayName.substring(0, 10) + "...";
         }
