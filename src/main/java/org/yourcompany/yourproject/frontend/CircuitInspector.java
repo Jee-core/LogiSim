@@ -1,24 +1,50 @@
-package org.yourcompany.yourproject.GUI.ui;
+package org.yourcompany.yourproject.Frontend;
 
-import javax.swing.*;
-import org.yourcompany.yourproject.GUI.ui.Board;
-import org.yourcompany.yourproject.businessLayer.analysis.TruthTableGenerator;
-import org.yourcompany.yourproject.businessLayer.analysis.TruthTableGenerator.TruthTableRow;
-import org.yourcompany.yourproject.businessLayer.components.ComponentBase;
-import org.yourcompany.yourproject.businessLayer.components.Connector;
-import org.yourcompany.yourproject.businessLayer.components.Circuit;
-
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Container;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.Frame;
+import java.awt.GridLayout;
+import java.awt.LayoutManager;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
-import java.util.List;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.Queue;
+import javax.swing.Timer;
+
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.ButtonGroup;
+import javax.swing.JButton;
+import javax.swing.JDialog;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+import javax.swing.JScrollBar;
+import javax.swing.JScrollPane;
+import javax.swing.JSeparator;
+import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
+
+import org.yourcompany.yourproject.Backend.businessLayer.analysis.TruthTableGen;
+import org.yourcompany.yourproject.Backend.businessLayer.analysis.TruthTableGen.TruthTableRow;
+import org.yourcompany.yourproject.Backend.businessLayer.components.Circuit;
+import org.yourcompany.yourproject.Backend.businessLayer.components.GateComponent;
+import org.yourcompany.yourproject.Backend.businessLayer.components.gates.LED;
+import org.yourcompany.yourproject.Backend.businessLayer.components.Connector;
 
 /**
  * Circuit Inspector - Compact panel to display and edit inputs/outputs for the selected gate
@@ -30,9 +56,10 @@ public class CircuitInspector extends JPanel {
     private JLabel gateNameLabel;
     private final JPanel inputsPanel;
     private final JPanel outputsPanel;
-    //private JButton analyzeButton;
+    private JButton refreshButton;
     private JButton toggleButton;
-    private ComponentBase selectedGate;
+    private JButton globalRefreshButton; // Store as field for easy access
+    private GateComponent selectedGate;
     private Circuit currentCircuit;
     
     // Collapsible behavior variables
@@ -168,145 +195,302 @@ public class CircuitInspector extends JPanel {
     /**
      * Create compact header panel
      */
-    private JPanel createHeaderPanel() {
-        JPanel headerPanel = new JPanel(new BorderLayout());
-        headerPanel.setOpaque(false);
-        headerPanel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
-
-        // Left side: Gate name
-        gateNameLabel = new JLabel("No gate selected");
-        gateNameLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        gateNameLabel.setForeground(TEXT_COLOR);
-
-        // Right side: Buttons
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
-        buttonPanel.setOpaque(false);
-
-        // Toggle button (maximize/minimize)
-        toggleButton = new JButton("−");
-        toggleButton.setFont(new Font("Arial", Font.BOLD, 14));
-        toggleButton.setBackground(PANEL_BACKGROUND);
-        toggleButton.setForeground(TEXT_COLOR);
-        toggleButton.setBorder(BorderFactory.createEmptyBorder(2, 8, 2, 8));
-        toggleButton.setFocusPainted(false);
-        toggleButton.addActionListener(e -> toggleCollapse());
-
-        buttonPanel.add(toggleButton);
-
-        headerPanel.add(gateNameLabel, BorderLayout.WEST);
-        headerPanel.add(buttonPanel, BorderLayout.EAST);
-
-        return headerPanel;
-    }
-   
 /**
- * Get topological order for circuit (same as TruthTableGenerator)
+ * Create compact header panel
  */
-private List<ComponentBase> getTopologicalOrder(Circuit circuit) {
-    List<ComponentBase> result = new ArrayList<>();
-    Map<ComponentBase, Integer> inDegree = new HashMap<>();
-    Queue<ComponentBase> queue = new LinkedList<>();
-    
-    // Initialize in-degree for each gate
-    for (ComponentBase gate : circuit.getGates()) {
-        inDegree.put(gate, 0);
+private JPanel createHeaderPanel() {
+    JPanel headerPanel = new JPanel(new BorderLayout());
+    headerPanel.setOpaque(false);
+    headerPanel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+
+    // Left side: Gate name
+    gateNameLabel = new JLabel("No gate selected");
+    gateNameLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+    gateNameLabel.setForeground(TEXT_COLOR);
+
+    // Right side: Buttons
+    JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0)); // Increased spacing
+    buttonPanel.setOpaque(false);
+    buttonPanel.setPreferredSize(new Dimension(120, 30)); // Ensure minimum size
+
+    // Global refresh button for entire circuit
+    globalRefreshButton = new JButton("🔄");
+    globalRefreshButton.setFont(new Font("Arial", Font.BOLD, 14)); // Larger font
+    globalRefreshButton.setBackground(PANEL_BACKGROUND);
+    globalRefreshButton.setForeground(TEXT_COLOR);
+    globalRefreshButton.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8)); // Larger padding
+    globalRefreshButton.setFocusPainted(false);
+    globalRefreshButton.setToolTipText("Refresh entire circuit");
+    globalRefreshButton.addActionListener(e -> refreshEntireCircuit());
+    globalRefreshButton.setPreferredSize(new Dimension(35, 25)); // Fixed size
+
+    // Refresh button for LEDs
+    refreshButton = new JButton("⟳");
+    refreshButton.setFont(new Font("Arial", Font.BOLD, 14)); // Larger font
+    refreshButton.setBackground(PANEL_BACKGROUND);
+    refreshButton.setForeground(TEXT_COLOR);
+    refreshButton.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8)); // Larger padding
+    refreshButton.setFocusPainted(false);
+    refreshButton.setToolTipText("Refresh LED state");
+    refreshButton.addActionListener(e -> updateLEDState());
+    refreshButton.setVisible(false); // Initially hidden
+    refreshButton.setPreferredSize(new Dimension(35, 25)); // Fixed size
+
+    // Toggle button (maximize/minimize)
+    toggleButton = new JButton("−");
+    toggleButton.setFont(new Font("Arial", Font.BOLD, 16)); // Larger font
+    toggleButton.setBackground(PANEL_BACKGROUND);
+    toggleButton.setForeground(TEXT_COLOR);
+    toggleButton.setBorder(BorderFactory.createEmptyBorder(4, 10, 4, 10)); // Larger padding
+    toggleButton.setFocusPainted(false);
+    toggleButton.addActionListener(e -> toggleCollapse());
+    toggleButton.setPreferredSize(new Dimension(35, 25)); // Fixed size
+
+    buttonPanel.add(globalRefreshButton);
+    buttonPanel.add(refreshButton);
+    buttonPanel.add(toggleButton);
+
+    headerPanel.add(gateNameLabel, BorderLayout.WEST);
+    headerPanel.add(buttonPanel, BorderLayout.EAST);
+
+    return headerPanel;
+}
+
+    /**
+     * Refresh the entire circuit - recompute all signals and update display
+     */
+ 
+
+    /**
+     * Show brief visual feedback that circuit was refreshed
+     */
+    /**
+ * Refresh the entire circuit - recompute all signals and update display
+ */
+
+
+
+/**
+ * NEW: Called when circuit state changes to update inspector display
+ */
+public void onCircuitStateChanged() {
+    SwingUtilities.invokeLater(() -> {
+        System.out.println("DEBUG: CircuitInspector - Circuit state changed, updating display");
+        refreshInspectorContent();
+    });
+}
+
+/**
+ * NEW: Refresh inspector content without triggering circuit recomputation
+ */
+private void refreshInspectorContent() {
+    if (selectedGate != null) {
+        // Recompute the selected gate's output to ensure we have latest values
+        selectedGate.computeOutput();
+        refreshContent();
     }
+    // Even if no gate is selected, we might want to update something
+    // For example, you could show circuit-level information
+}
+/**
+ * Force all LEDs in the circuit to update their state
+ */
+private void forceLEDUpdates() {
+    if (currentCircuit == null) return;
     
-    // Calculate in-degree (number of incoming connections from within circuit)
-    for (Connector wire : circuit.getWires()) {
-        ComponentBase toGate = wire.getToGate();
-        if (circuit.getGates().contains(wire.getFromGate())) {
-            inDegree.put(toGate, inDegree.get(toGate) + 1);
+    for (GateComponent gate : currentCircuit.getGates()) {
+        if (gate instanceof LED) {
+            LED led = (LED) gate;
+            led.computeOutput(); // Force LED to recompute
+            System.out.println("DEBUG: LED " + led.getName() + " state - Lit: " + led.isLit() + " Input: " + led.getInputVal(0));
         }
     }
-    
-    // Add gates with zero in-degree to queue (input nodes)
-    for (ComponentBase gate : circuit.getGates()) {
-        if (inDegree.get(gate) == 0) {
-            queue.add(gate);
-        }
-    }
-    
-    // Process queue
-    while (!queue.isEmpty()) {
-        ComponentBase current = queue.poll();
-        result.add(current);
+}
+private void refreshEntireCircuit() {
+    debugCircuitState();
+    if (controller != null && currentCircuit != null) {
+        System.out.println("DEBUG: CircuitInspector - Refreshing entire circuit...");
         
-        // Decrease in-degree of neighbors
-        for (int i = 0; i < current.getOutputs(); i++) {
-            Connector outputConnector = current.getOutputConnector(i);
-            if (outputConnector != null) {
-                ComponentBase neighbor = outputConnector.getToGate();
-                if (circuit.getGates().contains(neighbor)) {
-                    int newDegree = inDegree.get(neighbor) - 1;
-                    inDegree.put(neighbor, newDegree);
-                    if (newDegree == 0) {
-                        queue.add(neighbor);
+        // Apply all pending input changes FIRST
+        applyAllInputChanges();
+        
+        // Now propagate signals through the circuit
+        controller.propagateSignals();
+        
+        // SPECIAL: Force all LEDs to update their visual state
+        forceLEDUpdates();
+        
+        refreshInspectorContent();
+        showRefreshFeedback();
+        
+        System.out.println("DEBUG: CircuitInspector - Refresh completed");
+    } else {
+        System.out.println("DEBUG: Cannot refresh - controller: " + controller + ", circuit: " + currentCircuit);
+    }
+}
+/**
+ * NEW: Enhanced LED update that forces circuit recomputation
+ */
+
+    private void showRefreshFeedback() {
+        if (globalRefreshButton != null) {
+            Color originalColor = globalRefreshButton.getBackground();
+            globalRefreshButton.setBackground(new Color(100, 150, 100));
+            
+            // Reset color after short delay
+            Timer timer = new Timer(300, e -> {
+                globalRefreshButton.setBackground(originalColor);
+            });
+            timer.setRepeats(false);
+            timer.start();
+        }
+    }
+    /**
+ * Refresh the entire circuit - recompute all signals and update display
+ */
+
+
+/**
+ * Force recomputation of all gates in the circuit
+ */
+private void forceCircuitRecomputation() {
+    if (currentCircuit == null) return;
+    
+    try {
+        // Get all gates and force them to recompute their outputs
+        for (GateComponent gate : currentCircuit.getGates()) {
+            if (gate != null) {
+                gate.computeOutput();
+                System.out.println("DEBUG: Recomputed gate: " + gate.getName() + " - Output: " + gate.getOutputVal(0));
+            }
+        }
+        
+        // If there's a signal propagation method in the circuit, call it
+        if (currentCircuit != null) {
+            // Try to call sigPropogation if it exists
+            try {
+                currentCircuit.getClass().getMethod("sigPropogation").invoke(currentCircuit);
+                System.out.println("DEBUG: Called circuit signal propagation");
+            } catch (Exception e) {
+                System.out.println("DEBUG: Circuit signal propagation not available");
+            }
+        }
+    } catch (Exception e) {
+        System.err.println("Error during circuit recomputation: " + e.getMessage());
+        e.printStackTrace();
+    }
+}
+
+    /**
+     * Get topological order for circuit (same as TruthTableGenerator)
+     */
+    private List<GateComponent> getTopologicalOrder(Circuit circuit) {
+        List<GateComponent> result = new ArrayList<>();
+        Map<GateComponent, Integer> inDegree = new HashMap<>();
+        Queue<GateComponent> queue = new LinkedList<>();
+        
+        // Initialize in-degree for each gate
+        for (GateComponent gate : circuit.getGates()) {
+            inDegree.put(gate, 0);
+        }
+        
+        // Calculate in-degree (number of incoming connections from within circuit)
+        for (Connector wire : circuit.getWires()) {
+            GateComponent toGate = wire.getToGate();
+            if (circuit.getGates().contains(wire.getFromGate())) {
+                inDegree.put(toGate, inDegree.get(toGate) + 1);
+            }
+        }
+        
+        // Add gates with zero in-degree to queue (input nodes)
+        for (GateComponent gate : circuit.getGates()) {
+            if (inDegree.get(gate) == 0) {
+                queue.add(gate);
+            }
+        }
+        
+        // Process queue
+        while (!queue.isEmpty()) {
+            GateComponent current = queue.poll();
+            result.add(current);
+            
+            // Decrease in-degree of neighbors
+            for (int i = 0; i < current.getOutputs(); i++) {
+                Connector outputConnector = current.getOutputWire(i);
+                if (outputConnector != null) {
+                    GateComponent neighbor = outputConnector.getToGate();
+                    if (circuit.getGates().contains(neighbor)) {
+                        int newDegree = inDegree.get(neighbor) - 1;
+                        inDegree.put(neighbor, newDegree);
+                        if (newDegree == 0) {
+                            queue.add(neighbor);
+                        }
                     }
                 }
             }
         }
-    }
-    
-    // If not all gates are processed, add remaining gates
-    if (result.size() != circuit.getGates().size()) {
-        for (ComponentBase gate : circuit.getGates()) {
-            if (!result.contains(gate)) {
-                result.add(gate);
-            }
-        }
-    }
-    
-    return result;
-}
-/**
- * Get output names in the proper circuit order based on the truth table data
- */
-private List<String> getOutputsInCircuitOrder(TruthTableRow firstRow) {
-    if (firstRow == null) {
-        return new ArrayList<>();
-    }
-    
-    // Get all output names from the truth table
-    Map<String, Boolean> outputs = firstRow.getOutputs();
-    List<String> outputNames = new ArrayList<>(outputs.keySet());
-    
-    // DEBUG: Print the order we're getting from the truth table
-    System.out.println("GUI - Raw output names from truth table: " + outputNames);
-    
-    // FIX: Use topological order to match the console exactly
-    if (currentCircuit != null) {
-        try {
-            List<ComponentBase> topologicalOrder = getTopologicalOrder(currentCircuit);
-            List<String> topologicalNames = new ArrayList<>();
-            
-            // Add gates in topological order
-            for (ComponentBase gate : topologicalOrder) {
-                String gateName = gate.getName();
-                if (outputNames.contains(gateName) && !topologicalNames.contains(gateName)) {
-                    topologicalNames.add(gateName);
+        
+        // If not all gates are processed, add remaining gates
+        if (result.size() != circuit.getGates().size()) {
+            for (GateComponent gate : circuit.getGates()) {
+                if (!result.contains(gate)) {
+                    result.add(gate);
                 }
             }
-            
-            // Add any remaining gates that weren't in topological order
-            for (String gateName : outputNames) {
-                if (!topologicalNames.contains(gateName)) {
-                    topologicalNames.add(gateName);
-                }
-            }
-            
-            System.out.println("GUI - Output names in topological order: " + topologicalNames);
-            return topologicalNames;
-            
-        } catch (Exception e) {
-            System.err.println("Error getting topological order: " + e.getMessage());
-            // Fallback: return as-is
-            return outputNames;
         }
+        
+        return result;
     }
-    
-    return outputNames;
-}
+
+    /**
+     * Get output names in the proper circuit order based on the truth table data
+     */
+    private List<String> getOutputsInCircuitOrder(TruthTableRow firstRow) {
+        if (firstRow == null) {
+            return new ArrayList<>();
+        }
+        
+        // Get all output names from the truth table
+        Map<String, Boolean> outputs = firstRow.getOutputs();
+        List<String> outputNames = new ArrayList<>(outputs.keySet());
+        
+        // DEBUG: Print the order we're getting from the truth table
+        System.out.println("GUI - Raw output names from truth table: " + outputNames);
+        
+        // FIX: Use topological order to match the console exactly
+        if (currentCircuit != null) {
+            try {
+                List<GateComponent> topologicalOrder = getTopologicalOrder(currentCircuit);
+                List<String> topologicalNames = new ArrayList<>();
+                
+                // Add gates in topological order
+                for (GateComponent gate : topologicalOrder) {
+                    String gateName = gate.getName();
+                    if (outputNames.contains(gateName) && !topologicalNames.contains(gateName)) {
+                        topologicalNames.add(gateName);
+                    }
+                }
+                
+                // Add any remaining gates that weren't in topological order
+                for (String gateName : outputNames) {
+                    if (!topologicalNames.contains(gateName)) {
+                        topologicalNames.add(gateName);
+                    }
+                }
+                
+                System.out.println("GUI - Output names in topological order: " + topologicalNames);
+                return topologicalNames;
+                
+            } catch (Exception e) {
+                System.err.println("Error getting topological order: " + e.getMessage());
+                // Fallback: return as-is
+                return outputNames;
+            }
+        }
+        
+        return outputNames;
+    }
+
     /**
      * Show truth table in a message box dialog
      */
@@ -320,13 +504,13 @@ private List<String> getOutputsInCircuitOrder(TruthTableRow firstRow) {
         }
 
         try {
-            TruthTableGenerator generator = new TruthTableGenerator();
+            TruthTableGen generator = new TruthTableGen();
             
             // Add debug information
             System.out.println("DEBUG: Analyzing circuit: " + currentCircuit.getName());
             System.out.println("DEBUG: Circuit has " + currentCircuit.getGates().size() + " gates");
             
-            List<TruthTableRow> truthTable = generator.generateTruthTable(currentCircuit);
+            List<TruthTableRow> truthTable = generator.truthTableGenFun(currentCircuit);
             
             System.out.println("DEBUG: Generated truth table with " + truthTable.size() + " rows");
             
@@ -370,36 +554,36 @@ private List<String> getOutputsInCircuitOrder(TruthTableRow firstRow) {
         tablePanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
         if (table == null || table.isEmpty()) {
-        JLabel noDataLabel = new JLabel("No truth table data available", SwingConstants.CENTER);
-        noDataLabel.setForeground(Color.GRAY);
-        noDataLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        tablePanel.add(noDataLabel);
-    } else {
-        // Get input and output names using the same logic as first code
-        Map<String, Boolean> firstInputs = table.get(0).getInputs();
-        Map<String, Boolean> firstOutputs = table.get(0).getOutputs();
-        
-        List<String> inputNames = new ArrayList<>(firstInputs.keySet());
-        List<String> outputNames = new ArrayList<>(firstOutputs.keySet());
-        
-        // DEBUG: Print what we're working with
-        System.out.println("=== GUI TRUTH TABLE DEBUG ===");
-        System.out.println("Input names: " + inputNames);
-        System.out.println("Output names (raw from truth table): " + outputNames);
-        
-        // FIX: Get output names in proper circuit order
-        outputNames = getOutputsInCircuitOrder(table.get(0));
-        
-        System.out.println("Output names (after ordering): " + outputNames);
-        System.out.println("=== END DEBUG ===");
-        
-        // Inputs can stay alphabetical
-        Collections.sort(inputNames);
-        
-        // Create header
-        JPanel headerPanel = createDialogHeaderRow(inputNames, outputNames);
-        tablePanel.add(headerPanel);
+            JLabel noDataLabel = new JLabel("No truth table data available", SwingConstants.CENTER);
+            noDataLabel.setForeground(Color.GRAY);
+            noDataLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+            tablePanel.add(noDataLabel);
+        } else {
+            // Get input and output names using the same logic as first code
+            Map<String, Boolean> firstInputs = table.get(0).getInputs();
+            Map<String, Boolean> firstOutputs = table.get(0).getOutputs();
             
+            List<String> inputNames = new ArrayList<>(firstInputs.keySet());
+            List<String> outputNames = new ArrayList<>(firstOutputs.keySet());
+            
+            // DEBUG: Print what we're working with
+            System.out.println("=== GUI TRUTH TABLE DEBUG ===");
+            System.out.println("Input names: " + inputNames);
+            System.out.println("Output names (raw from truth table): " + outputNames);
+            
+            // FIX: Get output names in proper circuit order
+            outputNames = getOutputsInCircuitOrder(table.get(0));
+            
+            System.out.println("Output names (after ordering): " + outputNames);
+            System.out.println("=== END DEBUG ===");
+            
+            // Inputs can stay alphabetical
+            Collections.sort(inputNames);
+            
+            // Create header
+            JPanel headerPanel = createDialogHeaderRow(inputNames, outputNames);
+            tablePanel.add(headerPanel);
+                
             // Add separator
             JSeparator separator = new JSeparator();
             separator.setForeground(BORDER_COLOR);
@@ -436,24 +620,6 @@ private List<String> getOutputsInCircuitOrder(TruthTableRow firstRow) {
         dialog.add(buttonPanel, BorderLayout.SOUTH);
 
         return dialog;
-    }
-
-    /**
-     * Get output names in the proper circuit order based on the truth table data
-     */
-
-    /**
-     * Helper method to find a gate by name in the current circuit
-     */
-    private ComponentBase findGateByName(String gateName) {
-        if (currentCircuit == null) return null;
-        
-        for (ComponentBase gate : currentCircuit.getGates()) {
-            if (gate.getName().equals(gateName)) {
-                return gate;
-            }
-        }
-        return null;
     }
 
     /**
@@ -577,11 +743,6 @@ private List<String> getOutputsInCircuitOrder(TruthTableRow firstRow) {
      */
     public void setCurrentCircuit(Circuit circuit) {
         this.currentCircuit = circuit;
-        
-        // Automatically show truth table popup when circuit is set
-        if (circuit != null && !circuit.getGates().isEmpty()) {
-            //showTruthTableDialog();
-        }
     }
 
     /**
@@ -622,11 +783,58 @@ private List<String> getOutputsInCircuitOrder(TruthTableRow firstRow) {
     /**
      * Update toolbar content with selected gate.
      */
-    public void setSelectedGate(ComponentBase gate) {
+    public void setSelectedGate(GateComponent gate) {
         this.selectedGate = gate;
-        SwingUtilities.invokeLater(this::refreshContent);
+        SwingUtilities.invokeLater(() -> {
+            refreshContent();
+            updateRefreshButtonVisibility();
+        });
     }
 
+    /**
+     * Update refresh button visibility based on selected gate type
+     */
+    private void updateRefreshButtonVisibility() {
+        refreshButton.setVisible(isLEDSelected());
+    }
+
+    /**
+     * Check if the selected gate is an LED
+     */
+    private boolean isLEDSelected() {
+        return selectedGate != null && selectedGate.getClass().getSimpleName().equals("LED");
+    }
+
+    /**
+     * Force LED state computation and refresh display
+     */
+    
+/**
+ * DEBUG: Print current circuit state for troubleshooting
+ */
+private void debugCircuitState() {
+    if (currentCircuit != null) {
+        System.out.println("=== CIRCUIT DEBUG INFO ===");
+        System.out.println("Circuit: " + currentCircuit.getName());
+        System.out.println("Gates: " + currentCircuit.getGates().size());
+        
+        for (GateComponent gate : currentCircuit.getGates()) {
+            System.out.print("Gate: " + gate.getName() + " - Inputs: ");
+            for (int i = 0; i < gate.getInputs(); i++) {
+                System.out.print(gate.getInputVal(i) ? "1" : "0");
+            }
+            System.out.print(" - Outputs: ");
+            for (int i = 0; i < gate.getOutputs(); i++) {
+                System.out.print(gate.getOutputVal(i) ? "1" : "0");
+            }
+            if (gate instanceof LED) {
+                System.out.print(" - LED Lit: " + ((LED) gate).isLit());
+            }
+            System.out.println();
+        }
+        System.out.println("=== END DEBUG INFO ===");
+    }
+}
     private void refreshContent() {
         inputsPanel.removeAll();
         outputsPanel.removeAll();
@@ -653,7 +861,54 @@ private List<String> getOutputsInCircuitOrder(TruthTableRow firstRow) {
         label.setAlignmentX(Component.LEFT_ALIGNMENT);
         return label;
     }
+/**
+ * Special rendering for LED outputs
+ */
+private void renderLEDOutput() {
+    // Force LED to compute its state
+    selectedGate.computeOutput();
+    
+    // Cast to LED to access LED-specific methods
+    LED led = (LED) selectedGate;
+    boolean isLit = led.isLit();
+    
+    JPanel ledPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 5));
+    ledPanel.setOpaque(false);
+    ledPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
+    JLabel label = new JLabel("LED Status:");
+    label.setForeground(TEXT_COLOR);
+    label.setFont(new Font("Segoe UI", Font.BOLD, 12));
+
+    // Visual LED indicator
+    JLabel ledIndicator = new JLabel("●");
+    ledIndicator.setFont(new Font("Arial", Font.BOLD, 20));
+    ledIndicator.setForeground(isLit ? Color.GREEN : Color.RED);
+
+    JLabel statusLabel = new JLabel(isLit ? "LIT (GREEN)" : "OFF (RED)");
+    statusLabel.setForeground(isLit ? new Color(100, 255, 100) : new Color(255, 100, 100));
+    statusLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
+
+    ledPanel.add(label);
+    ledPanel.add(ledIndicator);
+    ledPanel.add(statusLabel);
+    outputsPanel.add(ledPanel);
+    
+    // Add info about LED behavior
+    JLabel infoLabel = new JLabel("Lights up when input is HIGH");
+    infoLabel.setForeground(Color.GRAY);
+    infoLabel.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+    infoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+    outputsPanel.add(infoLabel);
+    
+    // Add current input state
+    boolean inputState = selectedGate.getInputVal(0);
+    JLabel inputInfoLabel = new JLabel("Current input: " + (inputState ? "HIGH (1)" : "LOW (0)"));
+    inputInfoLabel.setForeground(inputState ? new Color(100, 255, 100) : new Color(255, 100, 100));
+    inputInfoLabel.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+    inputInfoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+    outputsPanel.add(inputInfoLabel);
+}
     private void renderCompactInputs() {
         int inputCount = selectedGate.getInputs();
         if (inputCount == 0) {
@@ -671,8 +926,8 @@ private List<String> getOutputsInCircuitOrder(TruthTableRow firstRow) {
             label.setForeground(TEXT_COLOR);
             label.setFont(new Font("Segoe UI", Font.BOLD, 12));
 
-            boolean currentValue = selectedGate.getInputValue(index);
-            Connector connector = selectedGate.getInputConnector(index);
+            boolean currentValue = selectedGate.getInputVal(index);
+            Connector connector = selectedGate.getInputWire(index);
             boolean connected = connector != null;
 
             // Create radio button group for 0/1 selection
@@ -713,20 +968,27 @@ private List<String> getOutputsInCircuitOrder(TruthTableRow firstRow) {
             radio0.setEnabled(enabled);
             radio1.setEnabled(enabled);
             
-            // Add action listeners
-            radio0.addActionListener(e -> {
-                if (controller != null && selectedGate != null && radio0.isSelected()) {
-                    controller.setGateInput(selectedGate, index, false);
-                    refreshContent();
-                }
-            });
-            
-            radio1.addActionListener(e -> {
-                if (controller != null && selectedGate != null && radio1.isSelected()) {
-                    controller.setGateInput(selectedGate, index, true);
-                    refreshContent();
-                }
-            });
+        radio0.addActionListener(e -> {
+    if (selectedGate != null && radio0.isSelected()) {
+        // Store the change for later application
+        storeInputChange(selectedGate, index, false);
+        // Also update locally for display
+        selectedGate.assignInputDirectly(index, false);
+        refreshContent();
+        System.out.println("Input " + index + " set to 0 (stored for refresh)");
+    }
+});
+
+radio1.addActionListener(e -> {
+    if (selectedGate != null && radio1.isSelected()) {
+        // Store the change for later application
+        storeInputChange(selectedGate, index, true);
+        // Also update locally for display
+        selectedGate.assignInputDirectly(index, true);
+        refreshContent();
+        System.out.println("Input " + index + " set to 1 (stored for refresh)");
+    }
+});
 
             radioPanel.add(radio0);
             radioPanel.add(radio1);
@@ -744,9 +1006,38 @@ private List<String> getOutputsInCircuitOrder(TruthTableRow firstRow) {
             inputsPanel.add(Box.createVerticalStrut(3));
         }
     }
+      private Map<GateComponent, Map<Integer, Boolean>> pendingInputChanges = new HashMap<>();
+    private void storeInputChange(GateComponent gate, int inputIndex, boolean value) {
+        if (!pendingInputChanges.containsKey(gate)) {
+            pendingInputChanges.put(gate, new HashMap<>());
+        }
+        pendingInputChanges.get(gate).put(inputIndex, value);
+    }
 
+    // Apply all stored input changes
+    private void applyAllInputChanges() {
+        for (Map.Entry<GateComponent, Map<Integer, Boolean>> gateEntry : pendingInputChanges.entrySet()) {
+            GateComponent gate = gateEntry.getKey();
+            Map<Integer, Boolean> changes = gateEntry.getValue();
+            
+            for (Map.Entry<Integer, Boolean> change : changes.entrySet()) {
+                int inputIndex = change.getKey();
+                boolean value = change.getValue();
+                // Use the normal setInputVal to trigger computation
+                gate.setInputVal(inputIndex, value);
+            }
+        }
+        pendingInputChanges.clear();
+    }
     private void renderCompactOutputs() {
         int outputCount = selectedGate.getOutputs();
+        
+        // SPECIAL HANDLING FOR LED
+        if (isLEDSelected()) {
+            renderLEDOutput();
+            return;
+        }
+        
         if (outputCount == 0) {
             outputsPanel.add(createCompactInfoLabel("No outputs"));
             return;
@@ -761,7 +1052,7 @@ private List<String> getOutputsInCircuitOrder(TruthTableRow firstRow) {
             label.setForeground(TEXT_COLOR);
             label.setFont(new Font("Segoe UI", Font.BOLD, 12));
 
-            boolean value = selectedGate.getOutputValue(i);
+            boolean value = selectedGate.getOutputVal(i);
             JLabel valueLabel = new JLabel(value ? "HIGH (1)" : "LOW (0)");
             valueLabel.setForeground(value ? new Color(100, 255, 100) : new Color(255, 100, 100));
             valueLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
@@ -774,4 +1065,34 @@ private List<String> getOutputsInCircuitOrder(TruthTableRow firstRow) {
             outputsPanel.add(Box.createVerticalStrut(3));
         }
     }
+
+    /**
+     * Special rendering for LED outputs
+     */
+ /**
+ * Enhanced LED update that forces circuit recomputation
+ */
+private void updateLEDState() {
+    if (isLEDSelected()) {
+        System.out.println("DEBUG: Updating LED state for: " + selectedGate.getName());
+        
+        // Apply any pending input changes first
+        applyAllInputChanges();
+        
+        // Force the entire circuit to update
+        controller.propagateSignals();
+        
+        // SPECIAL: Force LED to recompute its state
+        if (selectedGate instanceof LED) {
+            LED led = (LED) selectedGate;
+            led.computeOutput(); // Force LED to recompute
+            System.out.println("DEBUG: LED state after computation - Lit: " + led.isLit() + " Input: " + led.getInputVal(0));
+        }
+        
+        // Refresh the display
+        refreshContent();
+        
+        System.out.println("DEBUG: LED state updated");
+    }
+}
 }
