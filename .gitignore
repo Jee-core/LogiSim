@@ -1,2 +1,21 @@
 # Ignore DatabaseUtil.java file
 **/DatabaseUtil.java
+
+# Ignore all compiled Java class files
+*.class
+
+# Ignore build directories (common in Java projects)
+bin/
+build/
+out/
+target/
+
+# Ignore IDE-specific files
+# IntelliJ
+.idea/
+*.iml
+
+# Eclipse
+.settings/
+.project
+.classpath
