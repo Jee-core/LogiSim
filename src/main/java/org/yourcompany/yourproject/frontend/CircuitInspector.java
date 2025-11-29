@@ -1,4 +1,4 @@
-package org.yourcompany.yourproject.Frontend;
+package org.yourcompany.yourproject.frontend;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
