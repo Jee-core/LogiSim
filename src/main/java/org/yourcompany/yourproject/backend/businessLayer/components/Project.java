@@ -1,8 +1,4 @@
-package org.yourcompany.yourproject.Backend.businessLayer.components;
-
-import org.yourcompany.yourproject.Backend.businessLayer.components.Circuit;
-import org.yourcompany.yourproject.Backend.businessLayer.components.GateComponent;
-import org.yourcompany.yourproject.Backend.businessLayer.components.Connector;
+package org.yourcompany.yourproject.backend.businessLayer.components;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,9 +11,16 @@ public class Project {
         this.name = name;
     }
 
-    public String getName() { return name; }
-    public List<Circuit> getCircuits() { return circuits; }
+    public String getName() {
+        return name;
+    }
+
+    public List<Circuit> getCircuits() {
+        return circuits;
+    }
 
     @Override
-    public String toString() { return name; }
+    public String toString() {
+        return name;
+    }
 }

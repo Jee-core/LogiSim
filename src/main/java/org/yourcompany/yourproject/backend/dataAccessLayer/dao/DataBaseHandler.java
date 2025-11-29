@@ -1,4 +1,4 @@
-package org.yourcompany.yourproject.Backend.dataAccessLayer.dao;
+package org.yourcompany.yourproject.backend.dataAccessLayer.dao;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -10,17 +10,18 @@ import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Hashtable;
 
-import org.yourcompany.yourproject.Backend.dataAccessLayer.util.DatabaseUtil;
+import org.yourcompany.yourproject.backend.dataAccessLayer.util.DatabaseUtil;
 
 public class DataBaseHandler implements IDAO {
 
     // =============================
-    //          SAVE ROUTER
+    // SAVE ROUTER
     // =============================
     // Returns generated ID, or -1 on failure
     public int save(Hashtable<String, String> data) {
         String table = data.get("table");
-        if (table == null) return -1;
+        if (table == null)
+            return -1;
 
         return switch (table) {
             case "projects" -> saveProject(data);
@@ -33,12 +34,13 @@ public class DataBaseHandler implements IDAO {
     }
 
     // =============================
-    //          DELETE
+    // DELETE
     // =============================
     @Override
     public boolean delete(String id) {
         String[] parts = id.split(":");
-        if (parts.length != 2) return false;
+        if (parts.length != 2)
+            return false;
 
         String table = parts[0];
         int pkId = Integer.parseInt(parts[1]);
@@ -52,12 +54,13 @@ public class DataBaseHandler implements IDAO {
             default -> null;
         };
 
-        if (pkColumn == null) return false;
+        if (pkColumn == null)
+            return false;
 
         String sql = "DELETE FROM " + table + " WHERE " + pkColumn + " = ?";
 
         try (Connection conn = DatabaseUtil.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, pkId);
             return stmt.executeUpdate() > 0;
         } catch (SQLException e) {
@@ -67,12 +70,13 @@ public class DataBaseHandler implements IDAO {
     }
 
     // =============================
-    //          LOAD BY ID
+    // LOAD BY ID
     // =============================
     @Override
     public Hashtable<String, String> load(String id) {
         String[] parts = id.split(":");
-        if (parts.length != 2) return null;
+        if (parts.length != 2)
+            return null;
 
         String table = parts[0];
         int pkId = Integer.parseInt(parts[1]);
@@ -86,12 +90,13 @@ public class DataBaseHandler implements IDAO {
             default -> null;
         };
 
-        if (pkColumn == null) return null;
+        if (pkColumn == null)
+            return null;
 
         String sql = "SELECT * FROM " + table + " WHERE " + pkColumn + " = ?";
 
         try (Connection conn = DatabaseUtil.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setInt(1, pkId);
             ResultSet rs = stmt.executeQuery();
@@ -117,15 +122,15 @@ public class DataBaseHandler implements IDAO {
     }
 
     // =============================
-    //          LOAD ALL
+    // LOAD ALL
     // =============================
     public ArrayList<Hashtable<String, String>> loadAll(String table) {
         ArrayList<Hashtable<String, String>> list = new ArrayList<>();
         String sql = "SELECT * FROM " + table;
 
         try (Connection conn = DatabaseUtil.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
+                PreparedStatement stmt = conn.prepareStatement(sql);
+                ResultSet rs = stmt.executeQuery()) {
 
             ResultSetMetaData meta = rs.getMetaData();
             while (rs.next()) {
@@ -143,19 +148,20 @@ public class DataBaseHandler implements IDAO {
     }
 
     // =============================
-    //         SAVE PROJECT
+    // SAVE PROJECT
     // =============================
     public int saveProject(Hashtable<String, String> data) {
         String sql = "INSERT INTO projects (name) VALUES (?)";
 
         try (Connection conn = DatabaseUtil.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+                PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
             stmt.setString(1, data.get("name"));
             stmt.executeUpdate();
 
             ResultSet keys = stmt.getGeneratedKeys();
-            if (keys.next()) return keys.getInt(1);
+            if (keys.next())
+                return keys.getInt(1);
             return -1;
 
         } catch (SQLException e) {
@@ -165,20 +171,21 @@ public class DataBaseHandler implements IDAO {
     }
 
     // =============================
-    //         SAVE CIRCUIT
+    // SAVE CIRCUIT
     // =============================
     public int saveCircuit(Hashtable<String, String> data) {
         String sql = "INSERT INTO circuits (project_id, name) VALUES (?, ?)";
 
         try (Connection conn = DatabaseUtil.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+                PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
             stmt.setInt(1, Integer.parseInt(data.get("project_id")));
             stmt.setString(2, data.get("name"));
             stmt.executeUpdate();
 
             ResultSet keys = stmt.getGeneratedKeys();
-            if (keys.next()) return keys.getInt(1);
+            if (keys.next())
+                return keys.getInt(1);
             return -1;
 
         } catch (SQLException e) {
@@ -188,17 +195,17 @@ public class DataBaseHandler implements IDAO {
     }
 
     // =============================
-    //         SAVE COMPONENT
+    // SAVE COMPONENT
     // =============================
     public int saveComponent(Hashtable<String, String> data) {
         String sql = """
-            INSERT INTO components 
-            (circuit_id, name, type, inputs, outputs, position_x, position_y, id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """;
+                    INSERT INTO components
+                    (circuit_id, name, type, inputs, outputs, position_x, position_y, id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """;
 
         try (Connection conn = DatabaseUtil.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+                PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
             stmt.setInt(1, Integer.parseInt(data.get("circuit_id")));
             stmt.setString(2, data.get("name"));
@@ -211,7 +218,8 @@ public class DataBaseHandler implements IDAO {
 
             stmt.executeUpdate();
             ResultSet keys = stmt.getGeneratedKeys();
-            if (keys.next()) return keys.getInt(1);
+            if (keys.next())
+                return keys.getInt(1);
             return -1;
 
         } catch (SQLException e) {
@@ -221,45 +229,46 @@ public class DataBaseHandler implements IDAO {
     }
 
     // =============================
-    //         SAVE CONNECTOR
+    // SAVE CONNECTOR
     // =============================
     public int saveConnector(Hashtable<String, String> data) {
         String sql = """
-            INSERT INTO connectors 
-            (circuit_id, name, color, from_component_id, from_port, to_component_id, to_port, signal_value, id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """;
+                    INSERT INTO connectors
+                    (circuit_id, name, color, from_component_id, from_port, to_component_id, to_port, signal_value, id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """;
 
         try (Connection conn = DatabaseUtil.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+                PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
             stmt.setInt(1, Integer.parseInt(data.get("circuit_id")));
             stmt.setString(2, data.get("name"));
             stmt.setString(3, data.getOrDefault("color", "BLACK"));
-            
+
             // Handle from_component_id (can be null)
             if (data.get("from_component_id") != null && !data.get("from_component_id").isEmpty()) {
                 stmt.setInt(4, Integer.parseInt(data.get("from_component_id")));
             } else {
                 stmt.setNull(4, Types.INTEGER);
             }
-            
+
             stmt.setInt(5, Integer.parseInt(data.get("from_port")));
-            
+
             // Handle to_component_id (can be null)
             if (data.get("to_component_id") != null && !data.get("to_component_id").isEmpty()) {
                 stmt.setInt(6, Integer.parseInt(data.get("to_component_id")));
             } else {
                 stmt.setNull(6, Types.INTEGER);
             }
-            
+
             stmt.setInt(7, Integer.parseInt(data.get("to_port")));
             stmt.setBoolean(8, Boolean.parseBoolean(data.getOrDefault("signal_value", "false")));
             stmt.setString(9, data.get("id"));
 
             stmt.executeUpdate();
             ResultSet keys = stmt.getGeneratedKeys();
-            if (keys.next()) return keys.getInt(1);
+            if (keys.next())
+                return keys.getInt(1);
             return -1;
 
         } catch (SQLException e) {
@@ -269,17 +278,17 @@ public class DataBaseHandler implements IDAO {
     }
 
     // =============================
-    //         SAVE COMPONENT VALUE
+    // SAVE COMPONENT VALUE
     // =============================
     public int saveComponentValue(Hashtable<String, String> data) {
         String sql = """
-            INSERT INTO component_values 
-            (component_id, port_index, value, type)
-            VALUES (?, ?, ?, ?)
-        """;
+                    INSERT INTO component_values
+                    (component_id, port_index, value, type)
+                    VALUES (?, ?, ?, ?)
+                """;
 
         try (Connection conn = DatabaseUtil.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+                PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
             stmt.setInt(1, Integer.parseInt(data.get("component_id")));
             stmt.setInt(2, Integer.parseInt(data.get("port_index")));
@@ -288,7 +297,8 @@ public class DataBaseHandler implements IDAO {
 
             stmt.executeUpdate();
             ResultSet keys = stmt.getGeneratedKeys();
-            if (keys.next()) return keys.getInt(1);
+            if (keys.next())
+                return keys.getInt(1);
             return -1;
 
         } catch (SQLException e) {
@@ -298,14 +308,14 @@ public class DataBaseHandler implements IDAO {
     }
 
     // =============================
-    //      GENERIC FOREIGN KEY LOADER
+    // GENERIC FOREIGN KEY LOADER
     // =============================
     public ArrayList<Hashtable<String, String>> loadByForeignKey(String table, String column, int value) {
         ArrayList<Hashtable<String, String>> list = new ArrayList<>();
         String sql = "SELECT * FROM " + table + " WHERE " + column + " = ?";
 
         try (Connection conn = DatabaseUtil.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setInt(1, value);
             ResultSet rs = stmt.executeQuery();
@@ -326,9 +336,9 @@ public class DataBaseHandler implements IDAO {
     }
 
     // =============================
-    //      SPECIFIC LOAD METHODS
+    // SPECIFIC LOAD METHODS
     // =============================
-    
+
     public ArrayList<Hashtable<String, String>> loadCircuitsByProject(int projectId) {
         return loadByForeignKey("circuits", "project_id", projectId);
     }
@@ -346,13 +356,13 @@ public class DataBaseHandler implements IDAO {
     }
 
     // =============================
-    //      DELETE BY FOREIGN KEY
+    // DELETE BY FOREIGN KEY
     // =============================
     public boolean deleteByForeignKey(String table, String column, int value) {
         String sql = "DELETE FROM " + table + " WHERE " + column + " = ?";
 
         try (Connection conn = DatabaseUtil.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setInt(1, value);
             return stmt.executeUpdate() > 0;
@@ -364,14 +374,14 @@ public class DataBaseHandler implements IDAO {
     }
 
     // =============================
-    //      UPDATE METHODS
+    // UPDATE METHODS
     // =============================
-    
+
     public boolean updateComponentPosition(int componentId, int positionX, int positionY) {
         String sql = "UPDATE components SET position_x = ?, position_y = ? WHERE component_id = ?";
 
         try (Connection conn = DatabaseUtil.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setInt(1, positionX);
             stmt.setInt(2, positionY);
@@ -388,7 +398,7 @@ public class DataBaseHandler implements IDAO {
         String sql = "UPDATE connectors SET signal_value = ? WHERE connector_id = ?";
 
         try (Connection conn = DatabaseUtil.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setBoolean(1, signalValue);
             stmt.setInt(2, connectorId);
@@ -403,13 +413,13 @@ public class DataBaseHandler implements IDAO {
     public boolean updateComponentValue(int componentId, int portIndex, boolean value, String type) {
         // First try to update, if no rows affected then insert
         String updateSql = """
-            UPDATE component_values 
-            SET value = ? 
-            WHERE component_id = ? AND port_index = ? AND type = ?
-        """;
+                    UPDATE component_values
+                    SET value = ?
+                    WHERE component_id = ? AND port_index = ? AND type = ?
+                """;
 
         try (Connection conn = DatabaseUtil.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(updateSql)) {
+                PreparedStatement stmt = conn.prepareStatement(updateSql)) {
 
             stmt.setBoolean(1, value);
             stmt.setInt(2, componentId);
@@ -428,7 +438,7 @@ public class DataBaseHandler implements IDAO {
             data.put("port_index", String.valueOf(portIndex));
             data.put("value", String.valueOf(value));
             data.put("type", type);
-            
+
             return saveComponentValue(data) > 0;
 
         } catch (SQLException e) {

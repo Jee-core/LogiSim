@@ -1,4 +1,4 @@
-package org.yourcompany.yourproject.Frontend;
+package org.yourcompany.yourproject.frontend;
 
 import java.awt.BasicStroke;
 import java.awt.Color;
@@ -21,20 +21,19 @@ import javax.swing.JButton;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 
-import org.yourcompany.yourproject.Backend.businessLayer.analysis.BooleanEquationGenerator;
-import org.yourcompany.yourproject.Backend.businessLayer.components.GateComponent;
-import org.yourcompany.yourproject.Backend.businessLayer.components.gates.LED;
-import org.yourcompany.yourproject.Backend.businessLayer.components.gates.andd;
-import org.yourcompany.yourproject.Backend.businessLayer.components.gates.nott;
-import org.yourcompany.yourproject.Backend.businessLayer.components.gates.orr;
-
+import org.yourcompany.yourproject.backend.businessLayer.analysis.BooleanEquationGenerator;
+import org.yourcompany.yourproject.backend.businessLayer.components.GateComponent;
+import org.yourcompany.yourproject.backend.businessLayer.components.gates.LED;
+import org.yourcompany.yourproject.backend.businessLayer.components.gates.andd;
+import org.yourcompany.yourproject.backend.businessLayer.components.gates.nott;
+import org.yourcompany.yourproject.backend.businessLayer.components.gates.orr;
 
 public class GatePallete extends JPanel {
     private JButton Band, Bor, Bnot, BLed, BbooleanExpression;
     private ComponentPaletteButton dragSource;
     private DesignArea circuitPanel;
     private GateComponent currentSelectedGate;
-    
+
     // Modern dark theme colors
     private static final Color BACKGROUND_COLOR = new Color(45, 45, 55);
     private static final Color ACCENT_COLOR = new Color(70, 130, 180);
@@ -45,11 +44,11 @@ public class GatePallete extends JPanel {
     private static final Color BUTTON_HOVER = new Color(80, 80, 100);
     private static final Color BOOLEAN_BUTTON_COLOR = new Color(120, 80, 160); // Purple for boolean expression
     private static final Color BOOLEAN_BUTTON_DISABLED = new Color(60, 60, 70);
-    
+
     // LED specific colors
-    private static final Color LED_ON_COLOR = new Color(50, 200, 50);      // Bright green for LED
-    private static final Color LED_OFF_COLOR = new Color(200, 50, 50);     // Bright red for LED
-    private static final Color LED_BODY_COLOR = new Color(80, 80, 100);    // LED body color
+    private static final Color LED_ON_COLOR = new Color(50, 200, 50); // Bright green for LED
+    private static final Color LED_OFF_COLOR = new Color(200, 50, 50); // Bright red for LED
+    private static final Color LED_BODY_COLOR = new Color(80, 80, 100); // LED body color
 
     public GatePallete() {
         setLayout(new FlowLayout(FlowLayout.LEFT, 5, 5));
@@ -80,13 +79,14 @@ public class GatePallete extends JPanel {
         Band.setToolTipText("AND Gate: Output is HIGH when all inputs are HIGH (2 inputs, 1 output)");
         Bor.setToolTipText("OR Gate: Output is HIGH when any input is HIGH (2 inputs, 1 output)");
         Bnot.setToolTipText("NOT Gate: Output is the inverse of the input (1 input, 1 output)");
-        BLed.setToolTipText("LED: Visual indicator - Lights up GREEN when input is HIGH, RED when LOW (1 input, 0 outputs)");
+        BLed.setToolTipText(
+                "LED: Visual indicator - Lights up GREEN when input is HIGH, RED when LOW (1 input, 0 outputs)");
         BbooleanExpression.setToolTipText("Generate Boolean Expression for selected gate");
 
         // Initialize circuit panel reference (can be set later)
         this.circuitPanel = null;
         this.currentSelectedGate = null;
-        
+
         // TEST: Enable the button for testing - REMOVE THIS LATER
         BbooleanExpression.setEnabled(true);
     }
@@ -104,7 +104,8 @@ public class GatePallete extends JPanel {
 
     private void updateBooleanButtonState() {
         boolean enabled = (currentSelectedGate != null);
-        // For now, let's enable it if we have a selected gate, regardless of circuit panel
+        // For now, let's enable it if we have a selected gate, regardless of circuit
+        // panel
         // This makes it easier to test
         BbooleanExpression.setEnabled(enabled);
         System.out.println("Boolean button enabled: " + enabled);
@@ -117,7 +118,7 @@ public class GatePallete extends JPanel {
             protected void paintComponent(Graphics g) {
                 Graphics2D g2d = (Graphics2D) g.create();
                 g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                
+
                 // Fill background
                 if (getModel().isRollover()) {
                     g2d.setColor(BUTTON_HOVER);
@@ -125,7 +126,7 @@ public class GatePallete extends JPanel {
                     g2d.setColor(bgColor);
                 }
                 g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
-                
+
                 // Draw border
                 g2d.setColor(BORDER_COLOR);
                 g2d.setStroke(new BasicStroke(1.5f));
@@ -180,7 +181,7 @@ public class GatePallete extends JPanel {
             protected void paintComponent(Graphics g) {
                 Graphics2D g2d = (Graphics2D) g.create();
                 g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                
+
                 // Fill background with clear enabled/disabled states
                 if (!isEnabled()) {
                     g2d.setColor(BOOLEAN_BUTTON_DISABLED);
@@ -192,7 +193,7 @@ public class GatePallete extends JPanel {
                     g2d.setColor(BOOLEAN_BUTTON_COLOR);
                 }
                 g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
-                
+
                 // Draw border
                 g2d.setColor(BORDER_COLOR);
                 g2d.setStroke(new BasicStroke(1.5f));
@@ -236,10 +237,12 @@ public class GatePallete extends JPanel {
             @Override
             public void actionPerformed(ActionEvent e) {
                 System.out.println("=== BOOLEAN BUTTON CLICKED ===");
-                System.out.println("Current selected gate: " + (currentSelectedGate != null ? currentSelectedGate.getName() : "null"));
+                System.out.println("Current selected gate: "
+                        + (currentSelectedGate != null ? currentSelectedGate.getName() : "null"));
                 System.out.println("Circuit panel: " + (circuitPanel != null ? "set" : "null"));
                 if (circuitPanel != null) {
-                    System.out.println("Current circuit: " + (circuitPanel.getCurrentCircuit() != null ? "set" : "null"));
+                    System.out
+                            .println("Current circuit: " + (circuitPanel.getCurrentCircuit() != null ? "set" : "null"));
                 }
                 analyzeSelectedGate();
             }
@@ -250,7 +253,7 @@ public class GatePallete extends JPanel {
 
     private void drawBooleanSymbol(Graphics2D g2d, int centerX, int centerY, int width, int height) {
         g2d.setStroke(new BasicStroke(1.5f));
-        
+
         // Draw f(x) symbol - simplified for smaller button
         g2d.setFont(new Font("Segoe UI", Font.BOLD, 12));
         FontMetrics fm = g2d.getFontMetrics();
@@ -356,7 +359,7 @@ public class GatePallete extends JPanel {
         // Draw LED body
         g2d.setColor(LED_BODY_COLOR);
         g2d.fillRoundRect(x, y, ledWidth, ledHeight, 4, 4);
-        
+
         // Draw LED body outline
         g2d.setColor(TEXT_COLOR);
         g2d.drawRoundRect(x, y, ledWidth, ledHeight, 4, 4);
@@ -365,10 +368,10 @@ public class GatePallete extends JPanel {
         int lightSize = 9;
         int lightX = centerX - lightSize / 2;
         int lightY = centerY - lightSize / 2 - 2;
-        
+
         g2d.setColor(LED_OFF_COLOR);
         g2d.fillOval(lightX, lightY, lightSize, lightSize);
-        
+
         g2d.setColor(TEXT_COLOR);
         g2d.drawOval(lightX, lightY, lightSize, lightSize);
 
@@ -378,20 +381,20 @@ public class GatePallete extends JPanel {
 
     private void analyzeSelectedGate() {
         System.out.println("AnalyzeSelectedGate called");
-        
+
         if (currentSelectedGate == null) {
-            JOptionPane.showMessageDialog(this, 
-                "Please select a gate in the circuit first.\n\n" +
-                "Click on any gate in the design area to select it, then click the Boolean button.",
-                "No Gate Selected", 
-                JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this,
+                    "Please select a gate in the circuit first.\n\n" +
+                            "Click on any gate in the design area to select it, then click the Boolean button.",
+                    "No Gate Selected",
+                    JOptionPane.WARNING_MESSAGE);
             return;
         }
-        
+
         // Try to analyze even without circuit panel for testing
         try {
             System.out.println("Generating boolean expression for: " + currentSelectedGate.getName());
-            
+
             String expr;
             if (circuitPanel != null && circuitPanel.getCurrentCircuit() != null) {
                 BooleanEquationGenerator gen = new BooleanEquationGenerator();
@@ -400,26 +403,26 @@ public class GatePallete extends JPanel {
                 // Fallback: generate basic expression based on gate type
                 expr = generateBasicExpression(currentSelectedGate);
             }
-            
+
             String analysisResult = "Boolean Expression Analysis:\n\n" +
                     "Gate: " + currentSelectedGate.getName() + "\n" +
                     "Expression: " + expr + "\n\n" +
                     "Inputs: " + currentSelectedGate.getInputs() + "\n" +
                     "Outputs: " + currentSelectedGate.getOutputs();
-            
+
             JOptionPane.showMessageDialog(this, analysisResult, "Boolean Expression", JOptionPane.INFORMATION_MESSAGE);
-            
+
         } catch (Exception e) {
             System.out.println("Error in analyzeSelectedGate: " + e.getMessage());
             e.printStackTrace();
-            JOptionPane.showMessageDialog(this, 
-                "Error analyzing gate: " + e.getMessage() + "\n\n" +
-                "Make sure the gate is properly connected in a circuit.",
-                "Analysis Error", 
-                JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this,
+                    "Error analyzing gate: " + e.getMessage() + "\n\n" +
+                            "Make sure the gate is properly connected in a circuit.",
+                    "Analysis Error",
+                    JOptionPane.ERROR_MESSAGE);
         }
     }
-    
+
     private String generateBasicExpression(GateComponent gate) {
         // Basic fallback expression generation
         if (gate instanceof andd) {
