@@ -1,4 +1,4 @@
-package org.yourcompany.yourproject.Backend.dataAccessLayer.util;
+package org.yourcompany.yourproject.backend.dataAccessLayer.util;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -9,7 +9,7 @@ public class DatabaseUtil {
     private static final String URL = "jdbc:postgresql://ep-crimson-meadow-ahlv7atz-pooler.c-3.us-east-1.aws.neon.tech:5432/circuit_designer?sslmode=require&channel_binding=require";
     private static final String USER = "neondb_owner";
     private static final String PASSWORD = "npg_FPzto6rCfmH9";
-    
+
     static {
         try {
             // Load PostgreSQL JDBC Driver
@@ -26,11 +26,11 @@ public class DatabaseUtil {
             e.printStackTrace();
         }
     }
-    
+
     public static Connection getConnection() {
         System.out.println("🔗 Attempting Neon PostgreSQL connection...");
         System.out.println("  URL: " + URL.replaceAll("npg_.+", "npg_***")); // Hide password in logs
-        
+
         try {
             Connection conn = DriverManager.getConnection(URL, USER, PASSWORD);
             System.out.println("✓ Neon PostgreSQL connection SUCCESSFUL");
@@ -39,17 +39,17 @@ public class DatabaseUtil {
             System.out.println("✗ NEON POSTGRESQL CONNECTION FAILED!");
             System.out.println("  Error: " + e.getMessage());
             System.out.println("  SQL State: " + e.getSQLState());
-            
+
             if (e.getMessage().contains("authentication failed")) {
                 System.out.println("💡 SOLUTION: Check your Neon.tech credentials");
             } else if (e.getMessage().contains("Connection refused")) {
                 System.out.println("💡 SOLUTION: Check your internet connection and Neon.tech status");
             }
-            
+
             return null;
         }
     }
-    
+
     public static boolean testConnection() {
         System.out.println("\n🧪 Testing Neon PostgreSQL Connection...");
         try (Connection conn = getConnection()) {

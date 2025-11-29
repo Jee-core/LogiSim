@@ -4,10 +4,9 @@ import javax.swing.*;
 
 import org.yourcompany.yourproject.backend.businessLayer.components.GateComponent;
 import org.yourcompany.yourproject.backend.businessLayer.components.gates.LED;
-import org.yourcompany.yourproject.brontend.DrawGates;
+import org.yourcompany.yourproject.frontend.DrawGates;
 import org.yourcompany.yourproject.frontend.DrawWire;
 import org.yourcompany.yourproject.backend.businessLayer.components.Connector;
-
 
 import java.awt.*;
 import java.awt.event.MouseEvent;
@@ -120,16 +119,14 @@ public class BoardHelper {
             // Call both listener versions for compatibility
             if (gate != null) {
                 GateComponent gateComponent = gate.getGate();
-              
-                
+
                 if (gateComponent != null) {
                     gateSelectionListener.onGateSelected(gateComponent);
                 }
-              
-                
+
             } else {
                 gateSelectionListener.onGateSelected((GateComponent) null);
-              
+
             }
         }
         canvas.repaint();
@@ -147,7 +144,7 @@ public class BoardHelper {
      */
     public void updateWireViews(List<Connector> connectors) {
         System.out.println("=== updateWireViews called ===");
-        
+
         // Track deleted connectors to prevent recreation
         List<Connector> filteredConnectors = new ArrayList<>();
         for (Connector connector : connectors) {
@@ -158,9 +155,9 @@ public class BoardHelper {
                 System.out.println("Skipping deleted/disconnected connector: " + connector);
             }
         }
-        
+
         System.out.println("Original connectors: " + connectors.size() + ", Filtered: " + filteredConnectors.size());
-        
+
         // Remove old wire views that don't exist in filtered list
         List<DrawWire> wiresToRemove = new ArrayList<>();
         for (DrawWire existingWire : wireViews) {
@@ -168,14 +165,14 @@ public class BoardHelper {
                 wiresToRemove.add(existingWire);
             }
         }
-        
+
         // Remove the wires
         for (DrawWire wireToRemove : wiresToRemove) {
             canvas.remove(wireToRemove);
             wireViews.remove(wireToRemove);
             System.out.println("Removed UI wire: " + wireToRemove);
         }
-        
+
         // Add UI wires ONLY for new connectors that don't have UI yet
         for (Connector connector : filteredConnectors) {
             boolean alreadyExists = false;
@@ -185,7 +182,7 @@ public class BoardHelper {
                     break;
                 }
             }
-            
+
             if (!alreadyExists) {
                 DrawWire wireView = new DrawWire(connector);
                 wireView.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
@@ -194,7 +191,7 @@ public class BoardHelper {
                 System.out.println("Created new UI wire for: " + connector);
             }
         }
-        
+
         // Ensure wires are behind gates
         for (DrawWire wireView : wireViews) {
             canvas.setComponentZOrder(wireView, wireViews.size());
@@ -202,10 +199,10 @@ public class BoardHelper {
         for (DrawGates gateView : gateViews) {
             canvas.setComponentZOrder(gateView, 0);
         }
-        
+
         canvas.revalidate();
         canvas.repaint();
-        
+
         System.out.println("Final wire count: " + wireViews.size());
     }
 
@@ -395,14 +392,14 @@ public class BoardHelper {
         if (leds.isEmpty()) {
             return "No LEDs in circuit";
         }
-        
+
         int litCount = 0;
         for (LED led : leds) {
             if (led.isLit()) {
                 litCount++;
             }
         }
-        
+
         return String.format("LEDs: %d/%d LIT", litCount, leds.size());
     }
 
@@ -427,7 +424,7 @@ public class BoardHelper {
         // NEW: Special handling for LED - show visual state
         if (gate instanceof LED) {
             LED led = (LED) gate;
-            
+
             // LED status display
             gbc.gridx = 0;
             gbc.gridy = 0;
@@ -436,13 +433,13 @@ public class BoardHelper {
             ledStatusLabel.setForeground(led.isLit() ? Color.GREEN : Color.RED);
             ledStatusLabel.setFont(new Font("Arial", Font.BOLD, 14));
             contentPanel.add(ledStatusLabel, gbc);
-            
+
             gbc.gridy++;
             JLabel infoLabel = new JLabel("LED lights up when input signal is HIGH");
             infoLabel.setForeground(BORDER_COLOR);
             infoLabel.setFont(new Font("Arial", Font.ITALIC, 11));
             contentPanel.add(infoLabel, gbc);
-            
+
             gbc.gridwidth = 1;
             gbc.gridy++;
         }
@@ -469,7 +466,7 @@ public class BoardHelper {
             checkbox.addActionListener(e -> {
                 gate.setInputVal(index, checkbox.isSelected());
                 canvas.repaint(); // Update port colors
-                
+
                 // NEW: Special handling for LED - update visual state immediately
                 if (gate instanceof LED) {
                     ((LED) gate).computeOutput();
@@ -545,67 +542,68 @@ public class BoardHelper {
     public interface GateSelectionListener {
         void onGateSelected(GateComponent gate);
     }
+
     /**
- * NEW: Refresh all gate views to reflect current state after circuit evaluation
- */
-public void refreshAllGateViews() {
-    System.out.println("DEBUG: Refreshing all gate views...");
-    
-    for (DrawGates gateView : gateViews) {
-        // Force each gate to update its visual state
-        gateView.updateGateState();
-        gateView.repaint();
-        
-        // Special handling for LEDs
-        if (gateView.getGate() instanceof LED) {
-            LED led = (LED) gateView.getGate();
-            led.computeOutput(); // Recompute LED state
-            System.out.println("DEBUG: Updated LED " + led.getName() + " - Lit: " + led.isLit());
+     * NEW: Refresh all gate views to reflect current state after circuit evaluation
+     */
+    public void refreshAllGateViews() {
+        System.out.println("DEBUG: Refreshing all gate views...");
+
+        for (DrawGates gateView : gateViews) {
+            // Force each gate to update its visual state
+            gateView.updateGateState();
+            gateView.repaint();
+
+            // Special handling for LEDs
+            if (gateView.getGate() instanceof LED) {
+                LED led = (LED) gateView.getGate();
+                led.computeOutput(); // Recompute LED state
+                System.out.println("DEBUG: Updated LED " + led.getName() + " - Lit: " + led.isLit());
+            }
+        }
+
+        // Update wire visuals
+        for (DrawWire wireView : wireViews) {
+            wireView.repaint();
+        }
+
+        canvas.repaint();
+        System.out.println("DEBUG: All gate views refreshed. Total gates: " + gateViews.size());
+    }
+
+    /**
+     * NEW: Force complete circuit visual update
+     */
+    public void forceCircuitVisualUpdate() {
+        System.out.println("DEBUG: Force updating circuit visuals...");
+
+        // Update all gates
+        refreshAllGateViews();
+
+        // Special handling for signal propagation visualization
+        updateSignalPropagationVisuals();
+
+        canvas.repaint();
+    }
+
+    /**
+     * NEW: Update signal propagation colors on wires
+     */
+    private void updateSignalPropagationVisuals() {
+        for (DrawWire wireView : wireViews) {
+            wireView.repaint(); // This will make wires show current signal state
         }
     }
-    
-    // Update wire visuals
-    for (DrawWire wireView : wireViews) {
-        wireView.repaint();
-    }
-    
-    canvas.repaint();
-    System.out.println("DEBUG: All gate views refreshed. Total gates: " + gateViews.size());
-}
 
-/**
- * NEW: Force complete circuit visual update
- */
-public void forceCircuitVisualUpdate() {
-    System.out.println("DEBUG: Force updating circuit visuals...");
-    
-    // Update all gates
-    refreshAllGateViews();
-    
-    // Special handling for signal propagation visualization
-    updateSignalPropagationVisuals();
-    
-    canvas.repaint();
-}
-
-/**
- * NEW: Update signal propagation colors on wires
- */
-private void updateSignalPropagationVisuals() {
-    for (DrawWire wireView : wireViews) {
-        wireView.repaint(); // This will make wires show current signal state
-    }
-}
-
-/**
- * NEW: Get gate view by GateComponent
- */
-public DrawGates getGateView(GateComponent gate) {
-    for (DrawGates gateView : gateViews) {
-        if (gateView.getGate() == gate) {
-            return gateView;
+    /**
+     * NEW: Get gate view by GateComponent
+     */
+    public DrawGates getGateView(GateComponent gate) {
+        for (DrawGates gateView : gateViews) {
+            if (gateView.getGate() == gate) {
+                return gateView;
+            }
         }
+        return null;
     }
-    return null;
-}
 }
