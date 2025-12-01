@@ -1,0 +1,8 @@
+org.yourcompany.yourproject
+org.yourcompany.yourproject.Backend.businessLayer.analysis
+org.yourcompany.yourproject.Backend.businessLayer.components
+org.yourcompany.yourproject.Backend.businessLayer.components.gates
+org.yourcompany.yourproject.Backend.businessLayer.service
+org.yourcompany.yourproject.Backend.dataAccessLayer.dao
+org.yourcompany.yourproject.Backend.dataAccessLayer.util
+org.yourcompany.yourproject.Frontend
